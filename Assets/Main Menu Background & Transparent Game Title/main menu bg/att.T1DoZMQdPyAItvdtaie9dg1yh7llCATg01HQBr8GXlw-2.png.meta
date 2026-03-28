@@ -1,10 +1,16 @@
 fileFormatVersion: 2
-guid: be57d12de8d5f8e4fb6509900c355c49
+guid: 9371c386910b4bf45b5448b69b6b7172
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6243137679461772473
-    second: CARD_BACK_0
+      213: 5167711384176566465
+    second: att.T1DoZMQdPyAItvdtaie9dg1yh7llCATg01HQBr8GXlw-2_0
+  - first:
+      213: -8757441343074703228
+    second: att.T1DoZMQdPyAItvdtaie9dg1yh7llCATg01HQBr8GXlw-2_1
+  - first:
+      213: -8027185906957319180
+    second: att.T1DoZMQdPyAItvdtaie9dg1yh7llCATg01HQBr8GXlw-2_2
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -100,13 +106,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: CARD_BACK_0
+      name: att.T1DoZMQdPyAItvdtaie9dg1yh7llCATg01HQBr8GXlw-2_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 1000
-        height: 1500
+        x: 112
+        y: 310
+        width: 312
+        height: 471
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -115,8 +121,52 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 74313dbab5beb59a0800000000000000
-      internalID: -6243137679461772473
+      spriteID: 1c0269bcf1667b740800000000000000
+      internalID: 5167711384176566465
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: att.T1DoZMQdPyAItvdtaie9dg1yh7llCATg01HQBr8GXlw-2_1
+      rect:
+        serializedVersion: 2
+        x: 382
+        y: 368
+        width: 327
+        height: 443
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 48866b45f71577680800000000000000
+      internalID: -8757441343074703228
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: att.T1DoZMQdPyAItvdtaie9dg1yh7llCATg01HQBr8GXlw-2_2
+      rect:
+        serializedVersion: 2
+        x: 676
+        y: 338
+        width: 1203
+        height: 448
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4f389cd82f4b99090800000000000000
+      internalID: -8027185906957319180
       vertices: []
       indices: 
       edges: []
@@ -135,7 +185,9 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      CARD_BACK_0: -6243137679461772473
+      att.T1DoZMQdPyAItvdtaie9dg1yh7llCATg01HQBr8GXlw-2_0: 5167711384176566465
+      att.T1DoZMQdPyAItvdtaie9dg1yh7llCATg01HQBr8GXlw-2_1: -8757441343074703228
+      att.T1DoZMQdPyAItvdtaie9dg1yh7llCATg01HQBr8GXlw-2_2: -8027185906957319180
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
