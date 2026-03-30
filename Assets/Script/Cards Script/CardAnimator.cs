@@ -16,14 +16,13 @@ public class CardAnimator : MonoBehaviour
         rectTransform = GetComponent<RectTransform>();
     }
 
-    // DEAL — card falls from above into position
     public IEnumerator DealAnimation(Vector2 targetPos, float delay)
     {
         yield return new WaitForSeconds(delay);
-
         if (this == null || rectTransform == null) yield break;
 
-        Vector2 startPos = new Vector2(targetPos.x, targetPos.y + 800f);
+        Vector2 startPos =
+            new Vector2(targetPos.x, targetPos.y + 800f);
         rectTransform.anchoredPosition = startPos;
         rectTransform.localScale = Vector3.zero;
         rectTransform.localRotation = Quaternion.Euler(0, 0,
@@ -33,10 +32,8 @@ public class CardAnimator : MonoBehaviour
         while (elapsed < dealDuration)
         {
             if (this == null || rectTransform == null) yield break;
-
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / dealDuration);
-
             rectTransform.anchoredPosition =
                 Vector2.Lerp(startPos, targetPos, EaseOutBack(t));
             rectTransform.localScale =
@@ -44,18 +41,15 @@ public class CardAnimator : MonoBehaviour
             rectTransform.localRotation = Quaternion.Lerp(
                 rectTransform.localRotation,
                 Quaternion.identity, t * t);
-
             yield return null;
         }
 
         if (this == null || rectTransform == null) yield break;
-
         rectTransform.anchoredPosition = targetPos;
         rectTransform.localScale = Vector3.one;
         rectTransform.localRotation = Quaternion.identity;
     }
 
-    // PLAY — card scales up then flies to discard pile
     public IEnumerator PlayAnimation(RectTransform discardRect,
         Action onComplete)
     {
@@ -67,14 +61,12 @@ public class CardAnimator : MonoBehaviour
 
         Canvas canvas = GetComponentInParent<Canvas>();
         Vector3 startWorldPos = rectTransform.position;
-
         rectTransform.SetParent(canvas.transform, true);
         rectTransform.position = startWorldPos;
 
         Vector3 targetWorldPos = discardRect.position;
         float randomSpin = UnityEngine.Random.Range(-30f, 30f);
 
-        // Punch scale up
         float scaleElapsed = 0f;
         while (scaleElapsed < 0.12f)
         {
@@ -90,7 +82,6 @@ public class CardAnimator : MonoBehaviour
             yield return null;
         }
 
-        // Fly to discard pile
         float elapsed = 0f;
         Vector3 punchScale = rectTransform.localScale;
         while (elapsed < playDuration)
@@ -103,27 +94,24 @@ public class CardAnimator : MonoBehaviour
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / playDuration);
             float eased = EaseInOutCubic(t);
-
             rectTransform.position =
                 Vector3.Lerp(startWorldPos, targetWorldPos, eased);
             rectTransform.localRotation =
                 Quaternion.Euler(0, 0, Mathf.Lerp(0, randomSpin, eased));
             rectTransform.localScale =
                 Vector3.Lerp(punchScale, Vector3.one, eased);
-
             yield return null;
         }
 
         onComplete?.Invoke();
     }
 
-    // DRAW — card slides in from the side into hand
     public IEnumerator DrawAnimation(Vector2 targetPos)
     {
         if (this == null || rectTransform == null) yield break;
 
-        Vector2 startPos = new Vector2(targetPos.x + 400f,
-            targetPos.y - 80f);
+        Vector2 startPos =
+            new Vector2(targetPos.x + 400f, targetPos.y - 80f);
         rectTransform.anchoredPosition = startPos;
         rectTransform.localScale = Vector3.one * 0.5f;
         rectTransform.localRotation = Quaternion.Euler(0, 0, -20f);
@@ -132,30 +120,25 @@ public class CardAnimator : MonoBehaviour
         while (elapsed < drawDuration)
         {
             if (this == null || rectTransform == null) yield break;
-
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / drawDuration);
-
             rectTransform.anchoredPosition =
                 Vector2.Lerp(startPos, targetPos, EaseOutBack(t));
             rectTransform.localScale =
-                Vector3.Lerp(Vector3.one * 0.5f, Vector3.one,
-                    EaseOutCubic(t));
+                Vector3.Lerp(Vector3.one * 0.5f,
+                    Vector3.one, EaseOutCubic(t));
             rectTransform.localRotation = Quaternion.Lerp(
                 Quaternion.Euler(0, 0, -20f),
                 Quaternion.identity, EaseOutCubic(t));
-
             yield return null;
         }
 
         if (this == null || rectTransform == null) yield break;
-
         rectTransform.anchoredPosition = targetPos;
         rectTransform.localScale = Vector3.one;
         rectTransform.localRotation = Quaternion.identity;
     }
 
-    // Easing functions
     float EaseOutBack(float t)
     {
         float c1 = 1.70158f;

@@ -42,11 +42,8 @@ public class GameManager : MonoBehaviour
             Debug.Log("Not player's turn!");
             return;
         }
-
         GameSetup.Instance.AddCardToPlayer();
         Debug.Log("Player drew a card!");
-
-        // After drawing, turn passes to opponent
         GiveOpponentTurn();
     }
 
@@ -63,7 +60,6 @@ public class GameManager : MonoBehaviour
 
         if (IsMoveLegal(cardObj.cardData))
         {
-            // Disable interaction during animation
             CardClick click = cardGO.GetComponent<CardClick>();
             if (click != null) click.enabled = false;
 
@@ -82,7 +78,6 @@ public class GameManager : MonoBehaviour
     IEnumerator PlayCardWithAnimation(GameObject cardGO,
         CardObject cardObj)
     {
-        // Animate card flying to discard pile
         CardAnimator anim = cardGO.GetComponent<CardAnimator>();
         if (anim != null &&
             GameSetup.Instance.discardPileImage != null)
@@ -95,15 +90,12 @@ public class GameManager : MonoBehaviour
             yield return new WaitUntil(() => animDone);
         }
 
-        // Update discard pile
         topCardOnDiscardPile = cardObj.cardData;
         if (GameSetup.Instance.discardPileImage != null)
             GameSetup.Instance.discardPileImage.sprite =
                 cardObj.cardData.cardSprite;
 
-        // Remove card from player hand
         GameSetup.Instance.RemoveCardFromPlayer(cardGO);
-
         Debug.Log("Player played: " + cardObj.cardData.cardName);
 
         if (GameSetup.Instance.GetPlayerCardCount() == 0)
@@ -123,58 +115,39 @@ public class GameManager : MonoBehaviour
 
     void HandleSpecialCard(Card card)
     {
-        // Show visual effect
         CardEffectAnimator.Instance?.ShowEffect(card.type);
 
         switch (card.type)
         {
             case CardType.Block:
-                // Opponent loses their turn
-                // Player gets to play again
                 Debug.Log("BLOCK! Opponent loses their turn.");
-                Debug.Log("Player plays again!");
                 isPlayerTurn = true;
-                // Do NOT call GiveOpponentTurn
                 break;
 
             case CardType.Reverse:
-                // In 2 player, Reverse = Block
-                // Player gets to play again
                 Debug.Log("REVERSE! Acts like Block in 2P.");
-                Debug.Log("Player plays again!");
                 isPlayerTurn = true;
-                // Do NOT call GiveOpponentTurn
                 break;
 
             case CardType.DrawTwo:
-                // Opponent draws 2 cards AND loses their turn
-                // Player gets to play again
                 Debug.Log("DRAW TWO! Opponent draws 2 cards.");
                 GameSetup.Instance.AddCardToOpponent();
                 GameSetup.Instance.AddCardToOpponent();
                 opponentHandCount += 2;
-                Debug.Log("Player plays again!");
                 isPlayerTurn = true;
-                // Do NOT call GiveOpponentTurn
                 break;
 
             case CardType.DrawFour:
-                // Opponent draws 4 cards AND loses their turn
-                // Player gets to play again
                 Debug.Log("DRAW FOUR! Opponent draws 4 cards.");
                 for (int i = 0; i < 4; i++)
                     GameSetup.Instance.AddCardToOpponent();
                 opponentHandCount += 4;
-                Debug.Log("Player plays again!");
                 isPlayerTurn = true;
-                // Do NOT call GiveOpponentTurn
                 break;
 
             case CardType.RollDice:
-                // Roll dice — opponent draws that many cards
-                // Player gets to play again after dice result
                 Debug.Log("ROLL DICE!");
-                isPlayerTurn = false; // Lock until dice result
+                isPlayerTurn = false;
                 DiceManager.Instance?.RollDice(OnDiceResult);
                 break;
         }
@@ -184,31 +157,22 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("Dice result: " + result +
             " — Opponent draws " + result + " cards!");
-
         for (int i = 0; i < result; i++)
             GameSetup.Instance.AddCardToOpponent();
         opponentHandCount += result;
-
-        // Player gets to play again after Roll Dice
         isPlayerTurn = true;
-        Debug.Log("Player plays again after Roll Dice!");
     }
 
     public bool IsMoveLegal(Card card)
     {
-        // No card on discard pile yet — any card is legal
         if (topCardOnDiscardPile == null) return true;
 
-        // Same color — always legal regardless of card type
         if (card.color == topCardOnDiscardPile.color) return true;
 
-        // Same number — only legal between number cards
         if (card.type == CardType.Number &&
             topCardOnDiscardPile.type == CardType.Number &&
             card.number == topCardOnDiscardPile.number) return true;
 
-        // Same special type — only legal between matching specials
-        // (e.g. Block on Block, RollDice on RollDice)
         if (card.type != CardType.Number &&
             topCardOnDiscardPile.type != CardType.Number &&
             card.type == topCardOnDiscardPile.type) return true;
@@ -216,7 +180,6 @@ public class GameManager : MonoBehaviour
         return false;
     }
 
-    // Give turn to opponent
     public void GiveOpponentTurn()
     {
         isPlayerTurn = false;
@@ -224,7 +187,6 @@ public class GameManager : MonoBehaviour
         Invoke("SimulateOpponentTurn", 1.5f);
     }
 
-    // Give turn back to player
     public void GivePlayerTurn()
     {
         isPlayerTurn = true;
@@ -239,7 +201,6 @@ public class GameManager : MonoBehaviour
             GivePlayerTurn();
     }
 
-    // Keep EndTurn for compatibility
     public void EndTurn()
     {
         if (isPlayerTurn)

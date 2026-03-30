@@ -22,12 +22,10 @@ public class GameSetup : MonoBehaviour
 
     [Header("Settings")]
     public int startingCards = 7;
-    public float cardSpacing = 95f;
+    public float cardSpacing = 85f;
 
     public List<GameObject> playerCards = new List<GameObject>();
     public List<GameObject> opponentCards = new List<GameObject>();
-
-    // Track actual card data for opponent AI
     public List<Card> opponentCardData = new List<Card>();
 
     void Awake()
@@ -54,7 +52,6 @@ public class GameSetup : MonoBehaviour
         opponentCards.Clear();
         opponentCardData.Clear();
 
-        // Deal opponent cards
         for (int i = 0; i < startingCards; i++)
         {
             Card card = DeckManager.Instance.DrawCard();
@@ -69,7 +66,6 @@ public class GameSetup : MonoBehaviour
             }
         }
 
-        // Deal player cards
         for (int i = 0; i < startingCards; i++)
         {
             Card card = DeckManager.Instance.DrawCard();
@@ -80,26 +76,21 @@ public class GameSetup : MonoBehaviour
             }
         }
 
-        // Wait one frame then position ALL cards first
         yield return new WaitForEndOfFrame();
         Canvas.ForceUpdateCanvases();
 
-        // Position without animation first — cards must be
-        // in correct spots before animating
         PositionCards(opponentCards, opponentArea, false);
         PositionCards(playerCards, playerArea, false);
 
-        // Wait for positions to finalize
         yield return new WaitForEndOfFrame();
 
-        // NOW trigger deal animations from correct positions
         for (int i = 0; i < opponentCards.Count; i++)
         {
             if (opponentCards[i] == null) continue;
-            RectTransform rt = opponentCards[i]
-                .GetComponent<RectTransform>();
-            CardAnimator anim = opponentCards[i]
-                .GetComponent<CardAnimator>();
+            RectTransform rt =
+                opponentCards[i].GetComponent<RectTransform>();
+            CardAnimator anim =
+                opponentCards[i].GetComponent<CardAnimator>();
             if (anim != null && rt != null)
                 StartCoroutine(anim.DealAnimation(
                     rt.anchoredPosition, i * 0.07f));
@@ -108,16 +99,15 @@ public class GameSetup : MonoBehaviour
         for (int i = 0; i < playerCards.Count; i++)
         {
             if (playerCards[i] == null) continue;
-            RectTransform rt = playerCards[i]
-                .GetComponent<RectTransform>();
-            CardAnimator anim = playerCards[i]
-                .GetComponent<CardAnimator>();
+            RectTransform rt =
+                playerCards[i].GetComponent<RectTransform>();
+            CardAnimator anim =
+                playerCards[i].GetComponent<CardAnimator>();
             if (anim != null && rt != null)
                 StartCoroutine(anim.DealAnimation(
                     rt.anchoredPosition, i * 0.07f));
         }
 
-        // Give AI its cards
         OpponentAI ai = GameManager.Instance.opponentAI;
         if (ai != null)
         {
@@ -125,7 +115,6 @@ public class GameSetup : MonoBehaviour
             Debug.Log("AI cards set: " + opponentCardData.Count);
         }
 
-        // Setup discard pile
         Card firstCard = DeckManager.Instance.DrawCard();
         if (firstCard != null && discardPileImage != null)
         {
@@ -136,14 +125,13 @@ public class GameSetup : MonoBehaviour
             if (firstCard.cardSprite != null)
                 discardPileImage.sprite = firstCard.cardSprite;
             GameManager.Instance.topCardOnDiscardPile = firstCard;
-            Debug.Log("Discard pile: " + firstCard.cardName);
         }
 
         Debug.Log("=== SETUP COMPLETE ===");
     }
 
     void PositionCards(List<GameObject> cards, Transform area,
-    bool animate = false, float delayPerCard = 0.08f)
+        bool animate = false, float delayPerCard = 0.08f)
     {
         int count = cards.Count;
         if (count == 0) return;
@@ -173,24 +161,10 @@ public class GameSetup : MonoBehaviour
             Vector2 targetPos =
                 new Vector2(startX + (i * spacing), 0);
 
-            if (animate)
-            {
-                CardAnimator anim =
-                    cards[i].GetComponent<CardAnimator>();
-                if (anim != null)
-                    StartCoroutine(anim.DealAnimation(
-                        targetPos, i * delayPerCard));
-                else
-                    cardRect.anchoredPosition = targetPos;
-            }
-            else
-            {
-                if (cardRect != null)
-                    cardRect.anchoredPosition = targetPos;
-            }
+            if (cardRect != null)
+                cardRect.anchoredPosition = targetPos;
 
-            CardHover hover =
-                cards[i].GetComponent<CardHover>();
+            CardHover hover = cards[i].GetComponent<CardHover>();
             if (hover != null) hover.UpdateOriginalPosition();
         }
     }
@@ -222,10 +196,8 @@ public class GameSetup : MonoBehaviour
         GameObject cardGO = Instantiate(cardPrefab, area);
 
         if (CardSpriteManager.Instance != null)
-        {
             card.cardSprite = CardSpriteManager.Instance
                 .GetSprite(card.color, card.type, card.number);
-        }
 
         CardObject cardObj = cardGO.GetComponent<CardObject>();
         if (cardObj != null) cardObj.SetCard(card);
@@ -239,17 +211,13 @@ public class GameSetup : MonoBehaviour
         if (card != null)
         {
             if (CardSpriteManager.Instance != null)
-            {
                 card.cardSprite = CardSpriteManager.Instance
                     .GetSprite(card.color, card.type, card.number);
-            }
+
             GameObject cardGO = SpawnPlayerCard(card, playerArea);
             playerCards.Add(cardGO);
-
-            // Reposition all cards first
             PositionCards(playerCards, playerArea);
 
-            // Then animate just the new card
             RectTransform cardRect =
                 cardGO.GetComponent<RectTransform>();
             if (cardRect != null)
@@ -262,7 +230,6 @@ public class GameSetup : MonoBehaviour
             }
 
             GameManager.Instance.playerHandCount++;
-            Debug.Log("Player drew! Total: " + playerCards.Count);
         }
     }
 
@@ -272,7 +239,6 @@ public class GameSetup : MonoBehaviour
         Destroy(cardGO);
         GameManager.Instance.playerHandCount--;
         StartCoroutine(RepositionAfterRemove());
-        Debug.Log("Card played! Remaining: " + playerCards.Count);
     }
 
     IEnumerator RepositionAfterRemove()
@@ -288,18 +254,14 @@ public class GameSetup : MonoBehaviour
         if (card != null)
         {
             if (CardSpriteManager.Instance != null)
-            {
                 card.cardSprite = CardSpriteManager.Instance
                     .GetSprite(card.color, card.type, card.number);
-            }
+
             opponentCardData.Add(card);
             GameObject cardGO = SpawnCardBack(opponentArea);
             opponentCards.Add(cardGO);
-
-            // Position all opponent cards first
             PositionCards(opponentCards, opponentArea, false);
 
-            // Then animate just the new card sliding in
             RectTransform cardRect =
                 cardGO.GetComponent<RectTransform>();
             if (cardRect != null)
@@ -313,7 +275,6 @@ public class GameSetup : MonoBehaviour
 
             GameManager.Instance.opponentHandCount++;
 
-            // Sync with AI
             OpponentAI ai = GameManager.Instance.opponentAI;
             if (ai != null) ai.AddCardToHand(card);
         }
@@ -321,20 +282,20 @@ public class GameSetup : MonoBehaviour
 
     public void RemoveOpponentCard(Card card)
     {
-        // Remove from data list
         opponentCardData.Remove(card);
-
-        // Remove visual
         if (opponentArea.childCount > 0)
-        {
             Destroy(opponentArea.GetChild(
                 opponentArea.childCount - 1).gameObject);
-        }
-
-        // Remove from GO list
         if (opponentCards.Count > 0)
             opponentCards.RemoveAt(opponentCards.Count - 1);
+        StartCoroutine(RepositionOpponentCards());
+    }
 
+    public void RemoveOpponentCardByData(Card card)
+    {
+        opponentCardData.Remove(card);
+        if (opponentCards.Count > 0)
+            opponentCards.RemoveAt(opponentCards.Count - 1);
         StartCoroutine(RepositionOpponentCards());
     }
 
@@ -349,17 +310,5 @@ public class GameSetup : MonoBehaviour
     {
         playerCards.RemoveAll(card => card == null);
         return playerCards.Count;
-    }
-
-    public void RemoveOpponentCardByData(Card card)
-    {
-        opponentCardData.Remove(card);
-
-        // Remove last visual card from list
-        // (already destroyed by animation)
-        if (opponentCards.Count > 0)
-            opponentCards.RemoveAt(opponentCards.Count - 1);
-
-        StartCoroutine(RepositionOpponentCards());
     }
 }

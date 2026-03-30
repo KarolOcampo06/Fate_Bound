@@ -199,13 +199,10 @@ public class OpponentAI : MonoBehaviour
 
     IEnumerator PlayCardWithAnimation(Card card)
     {
-        // Find the matching card GO before removing it
         GameObject cardToAnimate = null;
         if (GameSetup.Instance.opponentCards.Count > 0)
-        {
             cardToAnimate = GameSetup.Instance.opponentCards
                 [GameSetup.Instance.opponentCards.Count - 1];
-        }
 
         if (cardToAnimate != null)
         {
@@ -229,23 +226,19 @@ public class OpponentAI : MonoBehaviour
                 yield return new WaitUntil(() => animDone);
             }
 
-            // Destroy the animated card clone after it lands
             Destroy(cardToAnimate);
         }
 
-        // Update discard pile visual
         GameManager.Instance.topCardOnDiscardPile = card;
         if (GameSetup.Instance.discardPileImage != null &&
             card.cardSprite != null)
             GameSetup.Instance.discardPileImage.sprite =
                 card.cardSprite;
 
-        // Remove from AI hand and visual list
         RemoveCardFromHand(card);
         GameSetup.Instance.RemoveOpponentCardByData(card);
         GameManager.Instance.opponentHandCount--;
 
-        // Check opponent wins
         if (opponentCards.Count == 0)
         {
             Debug.Log("Opponent wins!");
