@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
+using System.Collections.Generic;
 using Image = UnityEngine.UI.Image;
 using Debug = UnityEngine.Debug;
 using Random = UnityEngine.Random;
@@ -61,50 +63,62 @@ public class GameManager : MonoBehaviour
 
         if (IsMoveLegal(cardObj.cardData))
         {
-            // Update discard pile
-            topCardOnDiscardPile = cardObj.cardData;
-            if (GameSetup.Instance.discardPileImage != null)
-            {
-                GameSetup.Instance.discardPileImage.sprite =
-                    cardObj.cardData.cardSprite;
-            }
+            // Disable interaction during animation
+            CardClick click = cardGO.GetComponent<CardClick>();
+            if (click != null) click.enabled = false;
 
-            // Remove card from player hand
-            GameSetup.Instance.RemoveCardFromPlayer(cardGO);
+            CardHover hover = cardGO.GetComponent<CardHover>();
+            if (hover != null) hover.enabled = false;
 
-            Debug.Log("Player played: " + cardObj.cardData.cardName);
-
-            // Check win condition
-            if (GameSetup.Instance.GetPlayerCardCount() == 0)
-            {
-                WinLoseManager.Instance?.PlayerWins();
-                return;
-            }
-
-            // Check Fatebound
-            if (GameSetup.Instance.GetPlayerCardCount() == 1)
-            {
-                WinLoseManager.Instance?.FateBoundAlert();
-            }
-
-            // Handle based on card type
-            if (cardObj.cardData.type == CardType.Number)
-            {
-                // Number card — turn passes to opponent
-                Debug.Log("Number card played — opponent's turn");
-                GiveOpponentTurn();
-            }
-            else
-            {
-                // Special card — handle effect
-                HandleSpecialCard(cardObj.cardData);
-            }
+            StartCoroutine(PlayCardWithAnimation(cardGO, cardObj));
         }
         else
         {
             Debug.Log("Illegal move! Card does not match " +
                 "color or number.");
         }
+    }
+
+    IEnumerator PlayCardWithAnimation(GameObject cardGO,
+        CardObject cardObj)
+    {
+        // Animate card flying to discard pile
+        CardAnimator anim = cardGO.GetComponent<CardAnimator>();
+        if (anim != null &&
+            GameSetup.Instance.discardPileImage != null)
+        {
+            bool animDone = false;
+            StartCoroutine(anim.PlayAnimation(
+                GameSetup.Instance.discardPileImage
+                    .GetComponent<RectTransform>(),
+                () => animDone = true));
+            yield return new WaitUntil(() => animDone);
+        }
+
+        // Update discard pile
+        topCardOnDiscardPile = cardObj.cardData;
+        if (GameSetup.Instance.discardPileImage != null)
+            GameSetup.Instance.discardPileImage.sprite =
+                cardObj.cardData.cardSprite;
+
+        // Remove card from player hand
+        GameSetup.Instance.RemoveCardFromPlayer(cardGO);
+
+        Debug.Log("Player played: " + cardObj.cardData.cardName);
+
+        if (GameSetup.Instance.GetPlayerCardCount() == 0)
+        {
+            WinLoseManager.Instance?.PlayerWins();
+            yield break;
+        }
+
+        if (GameSetup.Instance.GetPlayerCardCount() == 1)
+            WinLoseManager.Instance?.FateBoundAlert();
+
+        if (cardObj.cardData.type == CardType.Number)
+            GiveOpponentTurn();
+        else
+            HandleSpecialCard(cardObj.cardData);
     }
 
     void HandleSpecialCard(Card card)
@@ -185,20 +199,18 @@ public class GameManager : MonoBehaviour
         // No card on discard pile yet — any card is legal
         if (topCardOnDiscardPile == null) return true;
 
-        // RollDice and DrawFour are wild — always legal
-        if (card.type == CardType.RollDice ||
-            card.type == CardType.DrawFour) return true;
-
-        // Match by color
+        // Same color — always legal regardless of card type
         if (card.color == topCardOnDiscardPile.color) return true;
 
-        // Match by number (number cards only)
+        // Same number — only legal between number cards
         if (card.type == CardType.Number &&
             topCardOnDiscardPile.type == CardType.Number &&
             card.number == topCardOnDiscardPile.number) return true;
 
-        // Match by type (special cards)
+        // Same special type — only legal between matching specials
+        // (e.g. Block on Block, RollDice on RollDice)
         if (card.type != CardType.Number &&
+            topCardOnDiscardPile.type != CardType.Number &&
             card.type == topCardOnDiscardPile.type) return true;
 
         return false;

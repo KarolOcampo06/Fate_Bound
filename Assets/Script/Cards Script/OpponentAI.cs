@@ -194,21 +194,55 @@ public class OpponentAI : MonoBehaviour
     void PlayCard(Card card)
     {
         Debug.Log("AI plays: " + card.cardName);
+        StartCoroutine(PlayCardWithAnimation(card));
+    }
 
-        // Update discard pile
-        GameManager.Instance.topCardOnDiscardPile = card;
-
-        // Update visual
-        if (GameSetup.Instance.discardPileImage != null &&
-            card.cardSprite != null)
+    IEnumerator PlayCardWithAnimation(Card card)
+    {
+        // Find the matching card GO before removing it
+        GameObject cardToAnimate = null;
+        if (GameSetup.Instance.opponentCards.Count > 0)
         {
-            GameSetup.Instance.discardPileImage.sprite =
-                card.cardSprite;
+            cardToAnimate = GameSetup.Instance.opponentCards
+                [GameSetup.Instance.opponentCards.Count - 1];
         }
 
-        // Remove from AI hand and visual
+        if (cardToAnimate != null)
+        {
+            // Flip to front face before animating
+            UnityEngine.UI.Image cardImage =
+                cardToAnimate.GetComponent<UnityEngine.UI.Image>();
+            if (cardImage != null && card.cardSprite != null)
+                cardImage.sprite = card.cardSprite;
+
+            CardAnimator anim =
+                cardToAnimate.GetComponent<CardAnimator>();
+            RectTransform discardRect =
+                GameSetup.Instance.discardPileImage
+                    .GetComponent<RectTransform>();
+
+            if (anim != null && discardRect != null)
+            {
+                bool animDone = false;
+                StartCoroutine(anim.PlayAnimation(
+                    discardRect, () => animDone = true));
+                yield return new WaitUntil(() => animDone);
+            }
+
+            // Destroy the animated card clone after it lands
+            Destroy(cardToAnimate);
+        }
+
+        // Update discard pile visual
+        GameManager.Instance.topCardOnDiscardPile = card;
+        if (GameSetup.Instance.discardPileImage != null &&
+            card.cardSprite != null)
+            GameSetup.Instance.discardPileImage.sprite =
+                card.cardSprite;
+
+        // Remove from AI hand and visual list
         RemoveCardFromHand(card);
-        GameSetup.Instance.RemoveOpponentCard(card);
+        GameSetup.Instance.RemoveOpponentCardByData(card);
         GameManager.Instance.opponentHandCount--;
 
         // Check opponent wins
@@ -216,14 +250,12 @@ public class OpponentAI : MonoBehaviour
         {
             Debug.Log("Opponent wins!");
             WinLoseManager.Instance?.PlayerLoses();
-            return;
+            yield break;
         }
 
-        // Check Fatebound
         if (opponentCards.Count == 1)
             Debug.Log("Opponent Fatebound!");
 
-        // Handle special cards
         HandleSpecialCard(card);
     }
 

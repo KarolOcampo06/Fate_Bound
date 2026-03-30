@@ -44,6 +44,7 @@ public class GameSetup : MonoBehaviour
     {
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
+        Canvas.ForceUpdateCanvases();
 
         Debug.Log("=== GAME SETUP STARTING ===");
 
@@ -59,27 +60,13 @@ public class GameSetup : MonoBehaviour
             Card card = DeckManager.Instance.DrawCard();
             if (card != null)
             {
-                // Get sprite for opponent card
                 if (CardSpriteManager.Instance != null)
-                {
                     card.cardSprite = CardSpriteManager.Instance
                         .GetSprite(card.color, card.type, card.number);
-                }
                 opponentCardData.Add(card);
                 GameObject cardGO = SpawnCardBack(opponentArea);
                 opponentCards.Add(cardGO);
             }
-        }
-
-        PositionCards(opponentCards, opponentArea);
-        Debug.Log("Opponent cards dealt: " + opponentCards.Count);
-
-        // Give cards to OpponentAI
-        OpponentAI ai = GameManager.Instance.opponentAI;
-        if (ai != null)
-        {
-            ai.SetCards(opponentCardData);
-            Debug.Log("AI cards set: " + opponentCardData.Count);
         }
 
         // Deal player cards
@@ -93,19 +80,59 @@ public class GameSetup : MonoBehaviour
             }
         }
 
-        PositionCards(playerCards, playerArea);
-        Debug.Log("Player cards dealt: " + playerCards.Count);
+        // Wait one frame then position ALL cards first
+        yield return new WaitForEndOfFrame();
+        Canvas.ForceUpdateCanvases();
+
+        // Position without animation first — cards must be
+        // in correct spots before animating
+        PositionCards(opponentCards, opponentArea, false);
+        PositionCards(playerCards, playerArea, false);
+
+        // Wait for positions to finalize
+        yield return new WaitForEndOfFrame();
+
+        // NOW trigger deal animations from correct positions
+        for (int i = 0; i < opponentCards.Count; i++)
+        {
+            if (opponentCards[i] == null) continue;
+            RectTransform rt = opponentCards[i]
+                .GetComponent<RectTransform>();
+            CardAnimator anim = opponentCards[i]
+                .GetComponent<CardAnimator>();
+            if (anim != null && rt != null)
+                StartCoroutine(anim.DealAnimation(
+                    rt.anchoredPosition, i * 0.07f));
+        }
+
+        for (int i = 0; i < playerCards.Count; i++)
+        {
+            if (playerCards[i] == null) continue;
+            RectTransform rt = playerCards[i]
+                .GetComponent<RectTransform>();
+            CardAnimator anim = playerCards[i]
+                .GetComponent<CardAnimator>();
+            if (anim != null && rt != null)
+                StartCoroutine(anim.DealAnimation(
+                    rt.anchoredPosition, i * 0.07f));
+        }
+
+        // Give AI its cards
+        OpponentAI ai = GameManager.Instance.opponentAI;
+        if (ai != null)
+        {
+            ai.SetCards(opponentCardData);
+            Debug.Log("AI cards set: " + opponentCardData.Count);
+        }
 
         // Setup discard pile
         Card firstCard = DeckManager.Instance.DrawCard();
         if (firstCard != null && discardPileImage != null)
         {
             if (CardSpriteManager.Instance != null)
-            {
                 firstCard.cardSprite = CardSpriteManager.Instance
                     .GetSprite(firstCard.color,
                         firstCard.type, firstCard.number);
-            }
             if (firstCard.cardSprite != null)
                 discardPileImage.sprite = firstCard.cardSprite;
             GameManager.Instance.topCardOnDiscardPile = firstCard;
@@ -115,24 +142,20 @@ public class GameSetup : MonoBehaviour
         Debug.Log("=== SETUP COMPLETE ===");
     }
 
-    void PositionCards(List<GameObject> cards, Transform area)
+    void PositionCards(List<GameObject> cards, Transform area,
+    bool animate = false, float delayPerCard = 0.08f)
     {
         int count = cards.Count;
         if (count == 0) return;
 
         float spacing = cardSpacing;
-
         RectTransform areaRect = area.GetComponent<RectTransform>();
+        float areaWidth = (areaRect != null && areaRect.rect.width > 0)
+            ? areaRect.rect.width : 1280f;
 
-        // Get actual width of the area
-        float areaWidth = areaRect != null ?
-            areaRect.rect.width : 900f;
-
-        // Make sure cards never exceed area width
         float maxWidth = areaWidth - 100f;
         float totalWidth = (count - 1) * spacing;
 
-        // Shrink spacing if needed
         if (totalWidth > maxWidth && count > 1)
         {
             spacing = maxWidth / (count - 1);
@@ -145,22 +168,31 @@ public class GameSetup : MonoBehaviour
         {
             if (cards[i] == null) continue;
 
-            RectTransform cardRect = cards[i]
-                .GetComponent<RectTransform>();
-            if (cardRect != null)
+            RectTransform cardRect =
+                cards[i].GetComponent<RectTransform>();
+            Vector2 targetPos =
+                new Vector2(startX + (i * spacing), 0);
+
+            if (animate)
             {
-                cardRect.anchoredPosition =
-                    new Vector2(startX + (i * spacing), 0);
-                cardRect.localScale = Vector3.one;
+                CardAnimator anim =
+                    cards[i].GetComponent<CardAnimator>();
+                if (anim != null)
+                    StartCoroutine(anim.DealAnimation(
+                        targetPos, i * delayPerCard));
+                else
+                    cardRect.anchoredPosition = targetPos;
+            }
+            else
+            {
+                if (cardRect != null)
+                    cardRect.anchoredPosition = targetPos;
             }
 
-            CardHover hover = cards[i].GetComponent<CardHover>();
+            CardHover hover =
+                cards[i].GetComponent<CardHover>();
             if (hover != null) hover.UpdateOriginalPosition();
         }
-
-        Debug.Log("Cards positioned: " + count +
-            " Spacing: " + spacing +
-            " Area width: " + areaWidth);
     }
 
     void ClearArea(Transform area)
@@ -213,7 +245,22 @@ public class GameSetup : MonoBehaviour
             }
             GameObject cardGO = SpawnPlayerCard(card, playerArea);
             playerCards.Add(cardGO);
+
+            // Reposition all cards first
             PositionCards(playerCards, playerArea);
+
+            // Then animate just the new card
+            RectTransform cardRect =
+                cardGO.GetComponent<RectTransform>();
+            if (cardRect != null)
+            {
+                Vector2 finalPos = cardRect.anchoredPosition;
+                CardAnimator anim =
+                    cardGO.GetComponent<CardAnimator>();
+                if (anim != null)
+                    StartCoroutine(anim.DrawAnimation(finalPos));
+            }
+
             GameManager.Instance.playerHandCount++;
             Debug.Log("Player drew! Total: " + playerCards.Count);
         }
@@ -248,7 +295,22 @@ public class GameSetup : MonoBehaviour
             opponentCardData.Add(card);
             GameObject cardGO = SpawnCardBack(opponentArea);
             opponentCards.Add(cardGO);
-            PositionCards(opponentCards, opponentArea);
+
+            // Position all opponent cards first
+            PositionCards(opponentCards, opponentArea, false);
+
+            // Then animate just the new card sliding in
+            RectTransform cardRect =
+                cardGO.GetComponent<RectTransform>();
+            if (cardRect != null)
+            {
+                Vector2 finalPos = cardRect.anchoredPosition;
+                CardAnimator anim =
+                    cardGO.GetComponent<CardAnimator>();
+                if (anim != null)
+                    StartCoroutine(anim.DrawAnimation(finalPos));
+            }
+
             GameManager.Instance.opponentHandCount++;
 
             // Sync with AI
@@ -287,5 +349,17 @@ public class GameSetup : MonoBehaviour
     {
         playerCards.RemoveAll(card => card == null);
         return playerCards.Count;
+    }
+
+    public void RemoveOpponentCardByData(Card card)
+    {
+        opponentCardData.Remove(card);
+
+        // Remove last visual card from list
+        // (already destroyed by animation)
+        if (opponentCards.Count > 0)
+            opponentCards.RemoveAt(opponentCards.Count - 1);
+
+        StartCoroutine(RepositionOpponentCards());
     }
 }

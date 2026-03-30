@@ -1,70 +1,75 @@
 using UnityEngine;
+using System.Collections;
 using UnityEngine.EventSystems;
 
 public class CardHover : MonoBehaviour,
     IPointerEnterHandler, IPointerExitHandler
 {
     [Header("Hover Settings")]
-    public float hoverHeight = 30f;
-    public float hoverSpeed = 10f;
-    public float hoverScale = 1.1f;
+    public float liftAmount = 40f;
+    public float scaleAmount = 1.12f;
+    public float animDuration = 0.2f;
 
     private RectTransform rectTransform;
     private Vector2 originalPosition;
-    private Vector3 originalScale;
-    private Vector2 targetPosition;
-    private Vector3 targetScale;
-    private bool initialized = false;
+    private Coroutine hoverCoroutine;
 
-    void Update()
-    {
-        if (!initialized) return;
-
-        rectTransform.anchoredPosition = Vector2.Lerp(
-            rectTransform.anchoredPosition,
-            targetPosition,
-            Time.deltaTime * hoverSpeed
-        );
-        rectTransform.localScale = Vector3.Lerp(
-            rectTransform.localScale,
-            targetScale,
-            Time.deltaTime * hoverSpeed
-        );
-    }
-
-    // Initialize AFTER cards are positioned
-    public void Initialize()
+    void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
-        originalPosition = rectTransform.anchoredPosition;
-        originalScale = rectTransform.localScale;
-        targetPosition = originalPosition;
-        targetScale = originalScale;
-        initialized = true;
-    }
-
-    public void OnPointerEnter(PointerEventData eventData)
-    {
-        if (!initialized) Initialize();
-        targetPosition = originalPosition + new Vector2(0, hoverHeight);
-        targetScale = originalScale * hoverScale;
-    }
-
-    public void OnPointerExit(PointerEventData eventData)
-    {
-        if (!initialized) Initialize();
-        targetPosition = originalPosition;
-        targetScale = originalScale;
     }
 
     public void UpdateOriginalPosition()
     {
-        if (rectTransform == null)
-            rectTransform = GetComponent<RectTransform>();
         originalPosition = rectTransform.anchoredPosition;
-        originalScale = rectTransform.localScale;
-        targetPosition = originalPosition;
-        targetScale = originalScale;
-        initialized = true;
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (hoverCoroutine != null) StopCoroutine(hoverCoroutine);
+        hoverCoroutine = StartCoroutine(AnimateHover(true));
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        if (hoverCoroutine != null) StopCoroutine(hoverCoroutine);
+        hoverCoroutine = StartCoroutine(AnimateHover(false));
+    }
+
+    IEnumerator AnimateHover(bool hovering)
+    {
+        Vector2 startPos = rectTransform.anchoredPosition;
+        Vector3 startScale = rectTransform.localScale;
+
+        Vector2 targetPos = hovering ?
+            new Vector2(originalPosition.x,
+                originalPosition.y + liftAmount) :
+            originalPosition;
+
+        Vector3 targetScale = hovering ?
+            Vector3.one * scaleAmount : Vector3.one;
+
+        float elapsed = 0f;
+        while (elapsed < animDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / animDuration);
+            float eased = EaseOutCubic(t);
+
+            rectTransform.anchoredPosition =
+                Vector2.Lerp(startPos, targetPos, eased);
+            rectTransform.localScale =
+                Vector3.Lerp(startScale, targetScale, eased);
+
+            yield return null;
+        }
+
+        rectTransform.anchoredPosition = targetPos;
+        rectTransform.localScale = targetScale;
+    }
+
+    float EaseOutCubic(float t)
+    {
+        return 1f - Mathf.Pow(1f - t, 3f);
     }
 }
