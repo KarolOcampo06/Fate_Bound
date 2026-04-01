@@ -20,6 +20,12 @@ public class CardHover : MonoBehaviour,
         rectTransform = GetComponent<RectTransform>();
     }
 
+    public void SetOriginalPosition(Vector2 pos)
+    {
+        originalPosition = pos;
+        positionSet = true;
+    }
+
     public void UpdateOriginalPosition()
     {
         StartCoroutine(StorePositionNextFrame());
@@ -38,7 +44,7 @@ public class CardHover : MonoBehaviour,
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (!positionSet) return;
-        isHovered = true;
+        AudioManager.Instance?.PlayCardClick(); // ADD THIS
         if (hoverCoroutine != null) StopCoroutine(hoverCoroutine);
         hoverCoroutine = StartCoroutine(AnimateLift(true));
     }

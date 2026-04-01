@@ -30,19 +30,17 @@ public class CardEffectAnimator : MonoBehaviour
             effectPanel.SetActive(false);
     }
 
-    public void ShowEffect(CardType type)
+    // isPlayerCard = true  → PLAYER played the card
+    // isPlayerCard = false → OPPONENT played the card
+    public void ShowEffect(CardType type,
+        bool isPlayerCard = true)
     {
-        // Only show for special cards
         if (type == CardType.Number) return;
-
-        // Don't overlap animations
-        if (isAnimating)
-            StopAllCoroutines();
-
-        StartCoroutine(AnimateEffect(type));
+        if (isAnimating) StopAllCoroutines();
+        StartCoroutine(AnimateEffect(type, isPlayerCard));
     }
 
-    IEnumerator AnimateEffect(CardType type)
+    IEnumerator AnimateEffect(CardType type, bool isPlayerCard)
     {
         isAnimating = true;
         if (effectPanel == null)
@@ -51,67 +49,81 @@ public class CardEffectAnimator : MonoBehaviour
             yield break;
         }
 
-        // Reset state
-        CanvasGroup canvasGroup = effectPanel
-            .GetComponent<CanvasGroup>();
+        CanvasGroup canvasGroup =
+            effectPanel.GetComponent<CanvasGroup>();
         if (canvasGroup == null)
-            canvasGroup = effectPanel.AddComponent<CanvasGroup>();
+            canvasGroup =
+                effectPanel.AddComponent<CanvasGroup>();
         canvasGroup.alpha = 1f;
-
         effectPanel.SetActive(true);
+        AudioManager.Instance?.PlaySpecialCardSFX(type);
 
-        // Set text and color based on card type
+        // Set title and color
         switch (type)
         {
             case CardType.Block:
                 if (effectText != null)
                     effectText.text = "BLOCKED!";
-                if (effectSubText != null)
-                    effectSubText.text = "Opponent loses their turn";
                 if (effectBackground != null)
                     effectBackground.color = blockColor;
+                // Player played → opponent loses turn
+                // Opponent played → player loses turn
+                if (effectSubText != null)
+                    effectSubText.text = isPlayerCard ?
+                        "Opponent loses their turn!" :
+                        "You lose your turn!";
                 break;
 
             case CardType.Reverse:
                 if (effectText != null)
                     effectText.text = "REVERSED!";
-                if (effectSubText != null)
-                    effectSubText.text = "Direction changed!";
                 if (effectBackground != null)
                     effectBackground.color = reverseColor;
+                if (effectSubText != null)
+                    effectSubText.text = isPlayerCard ?
+                        "Opponent loses their turn!" :
+                        "You lose your turn!";
                 break;
 
             case CardType.DrawTwo:
                 if (effectText != null)
                     effectText.text = "DRAW 2!";
-                if (effectSubText != null)
-                    effectSubText.text = "Opponent draws 2 cards!";
                 if (effectBackground != null)
                     effectBackground.color = drawTwoColor;
+                // Player played → opponent draws
+                // Opponent played → player draws
+                if (effectSubText != null)
+                    effectSubText.text = isPlayerCard ?
+                        "Opponent draws 2 cards!" :
+                        "You draw 2 cards!";
                 break;
 
             case CardType.DrawFour:
                 if (effectText != null)
                     effectText.text = "DRAW 4!";
-                if (effectSubText != null)
-                    effectSubText.text = "Opponent draws 4 cards!";
                 if (effectBackground != null)
                     effectBackground.color = drawFourColor;
+                if (effectSubText != null)
+                    effectSubText.text = isPlayerCard ?
+                        "Opponent draws 4 cards!" :
+                        "You draw 4 cards!";
                 break;
 
             case CardType.RollDice:
                 if (effectText != null)
                     effectText.text = "ROLL DICE!";
-                if (effectSubText != null)
-                    effectSubText.text = "Rolling the dice...";
                 if (effectBackground != null)
                     effectBackground.color = rollDiceColor;
+                if (effectSubText != null)
+                    effectSubText.text = isPlayerCard ?
+                        "Opponent draws from the dice!" :
+                        "You draw from the dice!";
                 break;
         }
 
         // Scale up animation
-        RectTransform rect = effectPanel
-            .GetComponent<RectTransform>();
+        RectTransform rect =
+            effectPanel.GetComponent<RectTransform>();
         if (rect != null)
         {
             rect.localScale = Vector3.zero;
@@ -119,8 +131,10 @@ public class CardEffectAnimator : MonoBehaviour
             float elapsed = 0f;
             while (elapsed < 0.3f)
             {
-                float scale = Mathf.Lerp(0f, 1.1f, elapsed / 0.3f);
-                rect.localScale = new Vector3(scale, scale, 1f);
+                float scale =
+                    Mathf.Lerp(0f, 1.1f, elapsed / 0.3f);
+                rect.localScale =
+                    new Vector3(scale, scale, 1f);
                 elapsed += Time.deltaTime;
                 yield return null;
             }
@@ -128,8 +142,10 @@ public class CardEffectAnimator : MonoBehaviour
             elapsed = 0f;
             while (elapsed < 0.15f)
             {
-                float scale = Mathf.Lerp(1.1f, 1f, elapsed / 0.15f);
-                rect.localScale = new Vector3(scale, scale, 1f);
+                float scale =
+                    Mathf.Lerp(1.1f, 1f, elapsed / 0.15f);
+                rect.localScale =
+                    new Vector3(scale, scale, 1f);
                 elapsed += Time.deltaTime;
                 yield return null;
             }
@@ -137,15 +153,14 @@ public class CardEffectAnimator : MonoBehaviour
             rect.localScale = Vector3.one;
         }
 
-        // Keep visible
         yield return new WaitForSeconds(1.5f);
 
         // Fade out
         float fadeElapsed = 0f;
         while (fadeElapsed < 0.5f)
         {
-            canvasGroup.alpha = Mathf.Lerp(
-                1f, 0f, fadeElapsed / 0.5f);
+            canvasGroup.alpha =
+                Mathf.Lerp(1f, 0f, fadeElapsed / 0.5f);
             fadeElapsed += Time.deltaTime;
             yield return null;
         }

@@ -254,7 +254,9 @@ public class OpponentAI : MonoBehaviour
 
     void HandleSpecialCard(Card card)
     {
-        CardEffectAnimator.Instance?.ShowEffect(card.type);
+        // ALWAYS pass false here — opponent played the card
+        // so the effect text must say "You draw..." etc.
+        CardEffectAnimator.Instance?.ShowEffect(card.type, false);
 
         switch (card.type)
         {
@@ -295,7 +297,8 @@ public class OpponentAI : MonoBehaviour
                         " — player draws " + result);
                     for (int i = 0; i < result; i++)
                         GameSetup.Instance.AddCardToPlayer();
-                    GameManager.Instance.playerHandCount += result;
+                    GameManager.Instance.playerHandCount +=
+                        result;
                     GameManager.Instance.isPlayerTurn = false;
                     Invoke("StartOpponentTurn", 2f);
                 });

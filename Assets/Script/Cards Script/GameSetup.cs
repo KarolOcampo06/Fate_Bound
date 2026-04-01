@@ -115,7 +115,32 @@ public class GameSetup : MonoBehaviour
             Debug.Log("AI cards set: " + opponentCardData.Count);
         }
 
-        Card firstCard = DeckManager.Instance.DrawCard();
+        // Setup discard pile — must be a number card first
+        // Keep drawing until we get a number card
+        Card firstCard = null;
+        int maxAttempts = 20;
+        int attempts = 0;
+
+        while (attempts < maxAttempts)
+        {
+            Card drawn = DeckManager.Instance.DrawCard();
+            attempts++;
+
+            if (drawn == null) break;
+
+            if (drawn.type == CardType.Number)
+            {
+                firstCard = drawn;
+                break;
+            }
+            else
+            {
+                // Put special card back at bottom of deck
+                DeckManager.Instance.ReturnCardToDeck(drawn);
+                Debug.Log("First card was special — redrawing...");
+            }
+        }
+
         if (firstCard != null && discardPileImage != null)
         {
             if (CardSpriteManager.Instance != null)
@@ -125,13 +150,14 @@ public class GameSetup : MonoBehaviour
             if (firstCard.cardSprite != null)
                 discardPileImage.sprite = firstCard.cardSprite;
             GameManager.Instance.topCardOnDiscardPile = firstCard;
+            Debug.Log("Discard pile: " + firstCard.cardName);
         }
 
         Debug.Log("=== SETUP COMPLETE ===");
     }
 
     void PositionCards(List<GameObject> cards, Transform area,
-        bool animate = false, float delayPerCard = 0.08f)
+    bool animate = false, float delayPerCard = 0.08f)
     {
         int count = cards.Count;
         if (count == 0) return;
@@ -156,6 +182,15 @@ public class GameSetup : MonoBehaviour
         {
             if (cards[i] == null) continue;
 
+            // Stop any running hover coroutine first
+            // and reset card back to its parent area
+            CardHover hover = cards[i].GetComponent<CardHover>();
+            if (hover != null) hover.ResetPosition();
+
+            // Make sure card is correctly parented to its area
+            if (cards[i].transform.parent != area)
+                cards[i].transform.SetParent(area, false);
+
             RectTransform cardRect =
                 cards[i].GetComponent<RectTransform>();
             Vector2 targetPos =
@@ -164,8 +199,9 @@ public class GameSetup : MonoBehaviour
             if (cardRect != null)
                 cardRect.anchoredPosition = targetPos;
 
-            CardHover hover = cards[i].GetComponent<CardHover>();
-            if (hover != null) hover.UpdateOriginalPosition();
+            // Set original position immediately
+            if (hover != null)
+                hover.SetOriginalPosition(targetPos);
         }
     }
 

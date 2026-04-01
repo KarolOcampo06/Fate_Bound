@@ -74,4 +74,12 @@ public class DeckManager : MonoBehaviour
         drawPile.RemoveAt(0);
         return card;
     }
+
+    public void ReturnCardToDeck(Card card)
+    {
+        // Add card back to bottom of deck
+        drawPile.Add(card);
+        Debug.Log("Card returned to deck bottom: " +
+            card.cardName);
+    }
 }

@@ -24,10 +24,16 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
+        // DO NOT use DontDestroyOnLoad
+        Time.timeScale = 1f;
+
         if (Instance == null)
             Instance = this;
         else
+        {
             Destroy(gameObject);
+            return;
+        }
     }
 
     void Start()
@@ -76,8 +82,12 @@ public class GameManager : MonoBehaviour
     }
 
     IEnumerator PlayCardWithAnimation(GameObject cardGO,
-        CardObject cardObj)
+    CardObject cardObj)
     {
+        // ADD shimmer before animation
+        CardVFX vfx = cardGO.GetComponent<CardVFX>();
+        if (vfx != null) vfx.PlayShimmer();
+
         CardAnimator anim = cardGO.GetComponent<CardAnimator>();
         if (anim != null &&
             GameSetup.Instance.discardPileImage != null)
@@ -90,13 +100,21 @@ public class GameManager : MonoBehaviour
             yield return new WaitUntil(() => animDone);
         }
 
+        // ADD burst at discard pile position
+        if (GameSetup.Instance.discardPileImage != null)
+        {
+            Color burstColor = GetCardColor(cardObj.cardData.color);
+            VFXManager.Instance?.SpawnCardBurst(
+                GameSetup.Instance.discardPileImage
+                    .transform.position, burstColor);
+        }
+
         topCardOnDiscardPile = cardObj.cardData;
         if (GameSetup.Instance.discardPileImage != null)
             GameSetup.Instance.discardPileImage.sprite =
                 cardObj.cardData.cardSprite;
 
         GameSetup.Instance.RemoveCardFromPlayer(cardGO);
-        Debug.Log("Player played: " + cardObj.cardData.cardName);
 
         if (GameSetup.Instance.GetPlayerCardCount() == 0)
         {
@@ -113,23 +131,47 @@ public class GameManager : MonoBehaviour
             HandleSpecialCard(cardObj.cardData);
     }
 
+    Color GetCardColor(CardColor color)
+    {
+        switch (color)
+        {
+            case CardColor.Red:
+                return new Color(1f, 0.2f, 0.2f);
+            case CardColor.Gold:
+                return new Color(1f, 0.85f, 0.1f);
+            case CardColor.Blue:
+                return new Color(0.2f, 0.5f, 1f);
+            case CardColor.Purple:
+                return new Color(0.6f, 0.1f, 0.8f);
+            default:
+                return Color.white;
+        }
+    }
+
     void HandleSpecialCard(Card card)
     {
-        CardEffectAnimator.Instance?.ShowEffect(card.type);
+        // ALWAYS pass true here — player played the card
+        CardEffectAnimator.Instance?.ShowEffect(card.type, true);
 
         switch (card.type)
         {
             case CardType.Block:
+                VFXManager.Instance?.FlashScreen(
+                    new Color(0.2f, 0.6f, 1f));
                 Debug.Log("BLOCK! Opponent loses their turn.");
                 isPlayerTurn = true;
                 break;
 
             case CardType.Reverse:
+                VFXManager.Instance?.FlashScreen(
+                    new Color(0.2f, 0.8f, 0.2f));
                 Debug.Log("REVERSE! Acts like Block in 2P.");
                 isPlayerTurn = true;
                 break;
 
             case CardType.DrawTwo:
+                VFXManager.Instance?.FlashScreen(
+                    new Color(1f, 0.6f, 0.2f));
                 Debug.Log("DRAW TWO! Opponent draws 2 cards.");
                 GameSetup.Instance.AddCardToOpponent();
                 GameSetup.Instance.AddCardToOpponent();
@@ -138,6 +180,8 @@ public class GameManager : MonoBehaviour
                 break;
 
             case CardType.DrawFour:
+                VFXManager.Instance?.FlashScreen(
+                    new Color(1f, 0.2f, 0.2f));
                 Debug.Log("DRAW FOUR! Opponent draws 4 cards.");
                 for (int i = 0; i < 4; i++)
                     GameSetup.Instance.AddCardToOpponent();
@@ -146,6 +190,8 @@ public class GameManager : MonoBehaviour
                 break;
 
             case CardType.RollDice:
+                VFXManager.Instance?.FlashScreen(
+                    new Color(0.8f, 0.2f, 0.8f));
                 Debug.Log("ROLL DICE!");
                 isPlayerTurn = false;
                 DiceManager.Instance?.RollDice(OnDiceResult);
@@ -191,6 +237,7 @@ public class GameManager : MonoBehaviour
     {
         isPlayerTurn = true;
         Debug.Log("Player's turn!");
+        UpdatePlayableCardGlow(); // ADD THIS
     }
 
     void SimulateOpponentTurn()
@@ -207,5 +254,21 @@ public class GameManager : MonoBehaviour
             GiveOpponentTurn();
         else
             GivePlayerTurn();
+    }
+
+    public void UpdatePlayableCardGlow()
+    {
+        foreach (GameObject cardGO in
+            GameSetup.Instance.playerCards)
+        {
+            if (cardGO == null) continue;
+
+            CardObject cardObj =
+                cardGO.GetComponent<CardObject>();
+            CardVFX vfx = cardGO.GetComponent<CardVFX>();
+
+            if (cardObj != null && vfx != null)
+                vfx.SetPlayable(IsMoveLegal(cardObj.cardData));
+        }
     }
 }

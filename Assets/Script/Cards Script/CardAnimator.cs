@@ -18,6 +18,7 @@ public class CardAnimator : MonoBehaviour
 
     public IEnumerator DealAnimation(Vector2 targetPos, float delay)
     {
+        AudioManager.Instance?.PlayCardDeal();
         yield return new WaitForSeconds(delay);
         if (this == null || rectTransform == null) yield break;
 
@@ -53,6 +54,7 @@ public class CardAnimator : MonoBehaviour
     public IEnumerator PlayAnimation(RectTransform discardRect,
         Action onComplete)
     {
+        AudioManager.Instance?.PlayCardFly();
         if (this == null || rectTransform == null)
         {
             onComplete?.Invoke();
@@ -108,6 +110,7 @@ public class CardAnimator : MonoBehaviour
 
     public IEnumerator DrawAnimation(Vector2 targetPos)
     {
+        AudioManager.Instance?.PlayCardDraw();
         if (this == null || rectTransform == null) yield break;
 
         Vector2 startPos =
