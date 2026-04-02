@@ -266,6 +266,12 @@ public class WinLoseManager : MonoBehaviour
         StartCoroutine(RestartWithFade());
     }
 
+    public void GoToMainMenu()
+    {
+        Time.timeScale = 1f;
+        StartCoroutine(GoToMenuWithFade());
+    }
+
     IEnumerator RestartWithFade()
     {
         if (screenOverlay != null)
