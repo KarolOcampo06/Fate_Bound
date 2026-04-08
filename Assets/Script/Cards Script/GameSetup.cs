@@ -154,6 +154,11 @@ public class GameSetup : MonoBehaviour
         }
 
         Debug.Log("=== SETUP COMPLETE ===");
+
+        // Wait one frame then activate glows
+        yield return new WaitForSeconds(1f);
+        if (GameManager.Instance != null)
+            GameManager.Instance.UpdatePlayableCardGlow();
     }
 
     void PositionCards(List<GameObject> cards, Transform area,

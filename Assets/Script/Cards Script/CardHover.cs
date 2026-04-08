@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.EventSystems;
 
@@ -44,17 +44,31 @@ public class CardHover : MonoBehaviour,
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (!positionSet) return;
-        AudioManager.Instance?.PlayCardClick(); // ADD THIS
-        if (hoverCoroutine != null) StopCoroutine(hoverCoroutine);
+
+        if (hoverCoroutine != null)
+            StopCoroutine(hoverCoroutine);
         hoverCoroutine = StartCoroutine(AnimateLift(true));
+
+        // ── FIX: Hover SFX restored ──────────────────────
+        AudioManager.Instance?.PlayCardClick();
+
+        // Show card guide
+        CardObject cardObj = GetComponent<CardObject>();
+        if (cardObj != null && cardObj.cardData != null)
+            CardGuideManager.Instance?
+                .ShowCardGuide(cardObj.cardData);
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
         if (!positionSet) return;
-        isHovered = false;
-        if (hoverCoroutine != null) StopCoroutine(hoverCoroutine);
+
+        if (hoverCoroutine != null)
+            StopCoroutine(hoverCoroutine);
         hoverCoroutine = StartCoroutine(AnimateLift(false));
+
+        // Hide card guide
+        CardGuideManager.Instance?.HideCardGuide();
     }
 
     IEnumerator AnimateLift(bool liftUp)

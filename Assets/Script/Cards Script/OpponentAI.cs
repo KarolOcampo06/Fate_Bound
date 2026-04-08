@@ -50,7 +50,6 @@ public class OpponentAI : MonoBehaviour
         float thinkTime = GetThinkTime();
         yield return new WaitForSeconds(thinkTime);
 
-        // Check if game over
         if (GameSetup.Instance.GetPlayerCardCount() == 0)
         {
             WinLoseManager.Instance?.PlayerLoses();
@@ -65,33 +64,104 @@ public class OpponentAI : MonoBehaviour
 
         if (playableCards.Count > 0)
         {
-            // AI has playable cards — play one!
-            Card cardToPlay = SelectCard(playableCards, topCard);
-            PlayCard(cardToPlay);
+            if (difficulty == GameSettings.Difficulty.Easy)
+            {
+                // Easy AI skips turn 30% of the time
+                // even if it has playable cards
+                if (Random.Range(0f, 1f) < 0.3f)
+                {
+                    Debug.Log("Easy AI skips turn!");
+                    GameSetup.Instance.AddCardToOpponent();
+                    yield return new WaitForSeconds(0.5f);
+                    GameManager.Instance.GivePlayerTurn();
+                    yield break;
+                }
+
+                // Try to get a number card to play
+                Card easyCard = SelectEasyCard(playableCards);
+
+                if (easyCard != null)
+                {
+                    PlayCard(easyCard);
+                }
+                else
+                {
+                    // No number cards — 60% chance to draw
+                    // instead of playing special
+                    if (Random.Range(0f, 1f) < 0.6f)
+                    {
+                        Debug.Log("Easy AI avoids special — draws!");
+                        GameSetup.Instance.AddCardToOpponent();
+                        yield return new WaitForSeconds(0.5f);
+                        GameManager.Instance.GivePlayerTurn();
+                    }
+                    else
+                    {
+                        // Play weakest special available
+                        CardType[] weakFirst = {
+                        CardType.Reverse,
+                        CardType.Block,
+                        CardType.DrawTwo,
+                        CardType.RollDice,
+                        CardType.DrawFour
+                    };
+
+                        Card weakCard = null;
+                        foreach (CardType type in weakFirst)
+                        {
+                            foreach (Card card in playableCards)
+                            {
+                                if (card.type == type)
+                                {
+                                    weakCard = card;
+                                    break;
+                                }
+                            }
+                            if (weakCard != null) break;
+                        }
+
+                        if (weakCard != null)
+                            PlayCard(weakCard);
+                        else
+                            PlayCard(playableCards[
+                                Random.Range(0, playableCards.Count)]);
+                    }
+                }
+            }
+            else
+            {
+                Card cardToPlay = SelectCard(playableCards, topCard);
+                PlayCard(cardToPlay);
+            }
         }
         else
         {
-            // No playable cards — draw one
             Debug.Log("AI has no playable card — drawing!");
             GameSetup.Instance.AddCardToOpponent();
 
-            // Check if drawn card is playable
             yield return new WaitForSeconds(0.5f);
 
             Card topCardNow =
                 GameManager.Instance.topCardOnDiscardPile;
             List<Card> newPlayable = GetPlayableCards(topCardNow);
 
-            if (newPlayable.Count > 0 &&
-                difficulty == GameSettings.Difficulty.Hard)
+            if (newPlayable.Count > 0)
             {
-                // Hard AI plays drawn card if possible
-                Card cardToPlay = SelectCard(newPlayable, topCardNow);
-                PlayCard(cardToPlay);
+                bool shouldPlay = false;
+
+                if (difficulty == GameSettings.Difficulty.Hard)
+                    shouldPlay = true;
+                else if (difficulty == GameSettings.Difficulty.Medium)
+                    shouldPlay = Random.Range(0f, 1f) < 0.4f;
+                // Easy NEVER plays drawn card
+
+                if (shouldPlay)
+                    PlayCard(SelectCard(newPlayable, topCardNow));
+                else
+                    GameManager.Instance.GivePlayerTurn();
             }
             else
             {
-                // Give turn back to player
                 GameManager.Instance.GivePlayerTurn();
             }
         }
@@ -102,11 +172,12 @@ public class OpponentAI : MonoBehaviour
         switch (difficulty)
         {
             case GameSettings.Difficulty.Easy:
-                return Random.Range(0.5f, 1f);
+                // Slow think time — feels less threatening
+                return Random.Range(2f, 3.5f);
             case GameSettings.Difficulty.Medium:
                 return Random.Range(1f, 2f);
             case GameSettings.Difficulty.Hard:
-                return Random.Range(1.5f, 2f);
+                return Random.Range(0.8f, 1.5f);
             default: return 1.5f;
         }
     }
@@ -133,18 +204,31 @@ public class OpponentAI : MonoBehaviour
         switch (difficulty)
         {
             case GameSettings.Difficulty.Easy:
-                // Random card
-                return playable[Random.Range(0, playable.Count)];
-
+                return SelectEasyCard(playable);
             case GameSettings.Difficulty.Medium:
                 return SelectMediumCard(playable);
-
             case GameSettings.Difficulty.Hard:
                 return SelectHardCard(playable);
-
             default:
                 return playable[Random.Range(0, playable.Count)];
         }
+    }
+
+    Card SelectEasyCard(List<Card> playable)
+    {
+        // Easy AI NEVER plays special cards — number cards only
+        List<Card> numbers = new List<Card>();
+
+        foreach (Card c in playable)
+            if (c.type == CardType.Number) numbers.Add(c);
+
+        // Always play number card if available
+        if (numbers.Count > 0)
+            return numbers[Random.Range(0, numbers.Count)];
+
+        // If FORCED to play special — only play weakest
+        // and only 40% of the time otherwise draws instead
+        return null;
     }
 
     Card SelectMediumCard(List<Card> playable)

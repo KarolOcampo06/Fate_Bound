@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
@@ -26,7 +26,6 @@ public class GameManager : MonoBehaviour
     {
         // DO NOT use DontDestroyOnLoad
         Time.timeScale = 1f;
-
         if (Instance == null)
             Instance = this;
         else
@@ -72,19 +71,28 @@ public class GameManager : MonoBehaviour
             CardHover hover = cardGO.GetComponent<CardHover>();
             if (hover != null) hover.enabled = false;
 
+            // Hide guide when card is played
+            CardGuideManager.Instance?.HideCardGuide();
+
+            // ── FIX: Clear ALL glows immediately the moment
+            //    a card is played — before animation even starts.
+            //    This stops the old hint glows right away.
+            ClearAllGlows();
+
             StartCoroutine(PlayCardWithAnimation(cardGO, cardObj));
         }
         else
         {
-            Debug.Log("Illegal move! Card does not match " +
-                "color or number.");
+            Debug.Log("Illegal move!");
+            // Show illegal move guide
+            CardGuideManager.Instance?.ShowIllegalMove(cardObj.cardData);
         }
     }
 
     IEnumerator PlayCardWithAnimation(GameObject cardGO,
-    CardObject cardObj)
+        CardObject cardObj)
     {
-        // ADD shimmer before animation
+        // Shimmer before animation
         CardVFX vfx = cardGO.GetComponent<CardVFX>();
         if (vfx != null) vfx.PlayShimmer();
 
@@ -100,7 +108,7 @@ public class GameManager : MonoBehaviour
             yield return new WaitUntil(() => animDone);
         }
 
-        // ADD burst at discard pile position
+        // Burst at discard pile position
         if (GameSetup.Instance.discardPileImage != null)
         {
             Color burstColor = GetCardColor(cardObj.cardData.color);
@@ -110,6 +118,7 @@ public class GameManager : MonoBehaviour
         }
 
         topCardOnDiscardPile = cardObj.cardData;
+
         if (GameSetup.Instance.discardPileImage != null)
             GameSetup.Instance.discardPileImage.sprite =
                 cardObj.cardData.cardSprite;
@@ -135,22 +144,17 @@ public class GameManager : MonoBehaviour
     {
         switch (color)
         {
-            case CardColor.Red:
-                return new Color(1f, 0.2f, 0.2f);
-            case CardColor.Gold:
-                return new Color(1f, 0.85f, 0.1f);
-            case CardColor.Blue:
-                return new Color(0.2f, 0.5f, 1f);
-            case CardColor.Purple:
-                return new Color(0.6f, 0.1f, 0.8f);
-            default:
-                return Color.white;
+            case CardColor.Red: return new Color(1f, 0.2f, 0.2f);
+            case CardColor.Gold: return new Color(1f, 0.85f, 0.1f);
+            case CardColor.Blue: return new Color(0.2f, 0.5f, 1f);
+            case CardColor.Purple: return new Color(0.6f, 0.1f, 0.8f);
+            default: return Color.white;
         }
     }
 
     void HandleSpecialCard(Card card)
     {
-        // ALWAYS pass true here � player played the card
+        // ALWAYS pass true here — player played the card
         CardEffectAnimator.Instance?.ShowEffect(card.type, true);
 
         switch (card.type)
@@ -197,47 +201,82 @@ public class GameManager : MonoBehaviour
                 DiceManager.Instance?.RollDice(OnDiceResult);
                 break;
         }
+
+        // ── FIX: After a special card, the turn stays with
+        //    the player (except RollDice). The discard pile has
+        //    changed, so we must:
+        //    1. Clear all old glows from the previous card
+        //    2. Re-evaluate which cards are now valid to play
+        //       so the 10-second hint timer restarts fresh
+        //       based on the NEW top card.
+        if (isPlayerTurn)
+            UpdatePlayableCardGlow();
     }
 
     void OnDiceResult(int result)
     {
         Debug.Log("Dice result: " + result +
-            " � Opponent draws " + result + " cards!");
+            " — Opponent draws " + result + " cards!");
         for (int i = 0; i < result; i++)
             GameSetup.Instance.AddCardToOpponent();
         opponentHandCount += result;
         isPlayerTurn = true;
+
+        // ── FIX: RollDice also keeps player's turn,
+        //    so refresh glows here too after dice resolves.
+        UpdatePlayableCardGlow();
     }
 
     public bool IsMoveLegal(Card card)
     {
         if (topCardOnDiscardPile == null) return true;
-
         if (card.color == topCardOnDiscardPile.color) return true;
-
         if (card.type == CardType.Number &&
             topCardOnDiscardPile.type == CardType.Number &&
             card.number == topCardOnDiscardPile.number) return true;
-
         if (card.type != CardType.Number &&
             topCardOnDiscardPile.type != CardType.Number &&
             card.type == topCardOnDiscardPile.type) return true;
-
         return false;
-    }
-
-    public void GiveOpponentTurn()
-    {
-        isPlayerTurn = false;
-        Debug.Log("Opponent's turn!");
-        Invoke("SimulateOpponentTurn", 1.5f);
     }
 
     public void GivePlayerTurn()
     {
         isPlayerTurn = true;
         Debug.Log("Player's turn!");
-        UpdatePlayableCardGlow(); // ADD THIS
+        UpdatePlayableCardGlow();
+        // Show turn start guide
+        CardGuideManager.Instance?.ShowTurnStartGuide();
+    }
+
+    public void UpdatePlayableCardGlow()
+    {
+        foreach (GameObject cardGO in
+            GameSetup.Instance.playerCards)
+        {
+            if (cardGO == null) continue;
+            CardObject cardObj = cardGO.GetComponent<CardObject>();
+            CardVFX vfx = cardGO.GetComponent<CardVFX>();
+            if (cardObj != null && vfx != null)
+            {
+                bool playable = IsMoveLegal(cardObj.cardData);
+                vfx.SetPlayable(playable);
+            }
+        }
+    }
+
+    // ── FIX: New helper — clears ALL glows immediately
+    //    without changing turn state. Used when a card
+    //    is played so old hint glows vanish right away.
+    public void ClearAllGlows()
+    {
+        foreach (GameObject cardGO in
+            GameSetup.Instance.playerCards)
+        {
+            if (cardGO == null) continue;
+            CardVFX vfx = cardGO.GetComponent<CardVFX>();
+            if (vfx != null) vfx.ResetAll();
+        }
     }
 
     void SimulateOpponentTurn()
@@ -248,27 +287,20 @@ public class GameManager : MonoBehaviour
             GivePlayerTurn();
     }
 
-    public void EndTurn()
+    public void GiveOpponentTurn()
     {
-        if (isPlayerTurn)
-            GiveOpponentTurn();
-        else
-            GivePlayerTurn();
-    }
+        isPlayerTurn = false;
+        Debug.Log("Opponent's turn!");
 
-    public void UpdatePlayableCardGlow()
-    {
+        // Reset all card glows
         foreach (GameObject cardGO in
             GameSetup.Instance.playerCards)
         {
             if (cardGO == null) continue;
-
-            CardObject cardObj =
-                cardGO.GetComponent<CardObject>();
             CardVFX vfx = cardGO.GetComponent<CardVFX>();
-
-            if (cardObj != null && vfx != null)
-                vfx.SetPlayable(IsMoveLegal(cardObj.cardData));
+            if (vfx != null) vfx.ResetAll();
         }
+
+        Invoke("SimulateOpponentTurn", 1.5f);
     }
 }
