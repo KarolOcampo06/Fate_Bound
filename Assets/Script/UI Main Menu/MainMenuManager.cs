@@ -129,4 +129,25 @@ public class MainMenuManager : MonoBehaviour
         AudioListener.pause = isMuted;
         bgmSource.mute = isMuted;
     }
+
+    public void OpenTutorial()
+    {
+        // Reset tutorial flag so it shows again
+        PlayerPrefs.DeleteKey("TutorialShown");
+        PlayerPrefs.Save();
+        // Load game scene — tutorial will auto show
+        PlayGame();
+    }
+
+    public GameObject tutorialPanel; // Drag your Tutorial Panel here in Inspector
+
+    public void ShowTutorial()
+    {
+        tutorialPanel.SetActive(true);
+    }
+
+    public void HideTutorial()
+    {
+        tutorialPanel.SetActive(false);
+    }
 }
